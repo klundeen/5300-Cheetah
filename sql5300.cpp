@@ -25,13 +25,13 @@ string columnDefinitionToString(const ColumnDefinition *col) {
     string ret(col->name);
     switch(col->type) {
     case ColumnDefinition::DOUBLE:
-        ret += " DOUBLE";
+        ret += " DOUBLE ";
         break;
     case ColumnDefinition::INT:
-        ret += " INT";
+        ret += " INT ";
         break;
     case ColumnDefinition::TEXT:
-        ret += " TEXT";
+        ret += " TEXT ";
         break;
     default:
         ret += " ...";
@@ -49,14 +49,17 @@ string printExpr(const Expr *expr)
         ret += "*";
         break;
     case kExprColumnRef:
-        ret += expr->name;
+        if(expr->table != NULL) {
+            ret += expr->table;
+            ret += ".";
+        }
         break;
     // case kExprTableColumnRef: inprint(expr->table, expr->name, numIndent); break;
     case kExprLiteralFloat:
-        ret += expr->fval;
+        ret += to_string(expr->fval);
         break;
     case kExprLiteralInt:
-        ret += expr->ival;
+        ret += to_string(expr->ival);
         break;
     case kExprLiteralString:
         ret += expr->name;
@@ -141,7 +144,7 @@ string printTableRefInfo(const TableRef *table)
     }
     if (table->alias != NULL)
     {
-
+        ret += " AS ";
         ret += table->alias;
     }
 
@@ -197,12 +200,12 @@ string selectInfo(const SelectStatement *stmt)
 string createInfo(const CreateStatement *stmt)
 {
     cout << "Entered create" << endl;
-    string ret("CREATE ");
+    string ret("CREATE TABLE ");
     ret += stmt->tableName;
+    ret += " ";
 
     for (ColumnDefinition* column : *stmt->columns) 
         ret+= columnDefinitionToString(column);
-
 
     return ret;
 }
