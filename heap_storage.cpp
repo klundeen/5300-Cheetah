@@ -71,11 +71,42 @@ RecordID SlottedPage::add(const Dbt* data) {
     memcpy(this->address(loc), data->get_data(), size);
     return id;
 }
+Dbt SlottedPage::*get(RecordID record_id){
+    u16 size;
+    u16 loc;
+    this->get_header(&size, &loc, record_id);
+    u16 headerloc = size + loc;
+    if(loc == 0){
+        return nullptr;
+    }
+    return (Dbt)this->block.get_data() + headerloc;
+}
+void SlottedPage::put(RecordID record_id, const Dbt &data);
 
+void SlottedPage::del(RecordID record_id){
+    u16 size, loc = this->get_header(record_id);
+    this->put_header(id,0,0);
+    this->slide(loc, loc + size);
+}
+RecordIDs SlottedPage::*ids(void);
+
+//Protected Methods for SlottedPage
+//________________
+void SlottedPage::get_header(u_int16_t &size, u_int16_t &loc, RecordID id = 0){
+    size = get_n(4*id);
+    loc = get_n(4*id + 2);
+}
 // Get 2-byte integer at given offset in block.
 u16 SlottedPage::get_n(u16 offset) {
     return *(u16*)this->address(offset);
 }
+bool SlottedPage::has_room(u_int16_t size){
+    u16 available;
+    available = this->end_free - (this->num_records +1) * 4;
+    return size <= available;
+}
+
+void SlottedPage::slide(u_int16_t start, u_int16_t end);
 
 // Put a 2-byte integer at given offset in block.
 void SlottedPage::put_n(u16 offset, u16 n) {
