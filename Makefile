@@ -1,20 +1,26 @@
-CFLAGS = -std=c++11 -Wall -DHAVE_CXX_STDHEADERS -D_GNU_SOURCE -D_REENTRANT -O3 -c
-GLOBAL_PATH = /usr/local/db6
-INCLUDE = $(GLOBAL_PATH)/include
-LIB = $(GLOBAL_PATH)/lib
+# Makefile, Kevin Lundeen, Seattle University, CPSC5300, Spring 2021
+# 
+CCFLAGS     = -std=c++11 -std=c++0x -Wall -Wno-c++11-compat -DHAVE_CXX_STDHEADERS -D_GNU_SOURCE -D_REENTRANT -O3 -c -ggdb
+COURSE      = /usr/local/db6
+INCLUDE_DIR = $(COURSE)/include
+LIB_DIR     = $(COURSE)/lib
 
-# All objects that need to be built to satisfy "sqlshell" target
-OBJS       = sql5300.o
+# following is a list of all the compiled object files needed to build the sql5300 executable
+OBJS       = sql5300.o heap_storage.o
 
-# Catch all for .o targets, points to their cpp
+# Rule for linking to create the executable
+# Note that this is the default target since it is the first non-generic one in the Makefile: $ make
+sql5300: $(OBJS)
+	g++ -L$(LIB_DIR) -o $@ $(OBJS) -ldb_cxx -lsqlparser
+
+sql5300.o : heap_storage.h storage_engine.h
+heap_storage.o : heap_storage.h storage_engine.h
+
+# General rule for compilation
 %.o: %.cpp
-	g++ -I$(INCLUDE) $(CFLAGS) -o "$@" "$<"
+	g++ -I$(INCLUDE_DIR) $(CCFLAGS) -o "$@" "$<"
 
-# Main build target, builds the corresponding object, compile command includes
-# there are linkage statements for the db_cxx and sqlparser
-sql3500: $(OBJS)
-	g++ -L$(LIB) -o $@ $< -ldb_cxx -lsqlparser
-
-#Cleaning
+# Rule for removing all non-source files (so they can get rebuilt from scratch)
+# Note that since it is not the first target, you have to invoke it explicitly: $ make clean
 clean:
-	rm -f sql3500.o sql3500
+	rm -f sql5300 *.o
