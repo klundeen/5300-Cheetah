@@ -79,16 +79,50 @@ Dbt SlottedPage::*get(RecordID record_id){
     if(loc == 0){
         return nullptr;
     }
-    return (Dbt)this->block.get_data() + headerloc;
+    return (Dbt)(this->block.get_data() + headerloc);
 }
-void SlottedPage::put(RecordID record_id, const Dbt &data);
+void SlottedPage::put(RecordID record_id, const Dbt &data){
+    u16 size = this->num_records;
+    u16 loc = this->end_free;
+    this->get_header(size,loc,record_id);
+    u16 new_size = (u16)data.get_size();
+    if(new_size > size){
+        u16 extra = new_size - size;
+        if(!(this->has_room(extra))){
+            throw DbBlockNoRoomError("not enough room for new record in the blocks");
+        }
+        this->slide(loc, loc - extra);
+        memcpy(this->address(loc-extra),data.get_data(),size);
+    }else{
+        memcpy(this->address(loc),data.get_data(),new_size);
+        this->slide(loc+new_size,loc+size);
+    }
+    this->get_header(&size,&loc,record_id);
+    this->put_header(record_id,new_size,loc);
+}
 
 void SlottedPage::del(RecordID record_id){
-    u16 size, loc = this->get_header(record_id);
+    u16 size;
+    u16 loc;
+    this->get_header(&size,&loc,record_id);
     this->put_header(id,0,0);
     this->slide(loc, loc + size);
 }
-RecordIDs SlottedPage::*ids(void);
+RecordIDs SlottedPage::*ids(void){
+    RecordIDs* IDs;
+    u16 size;
+    u16 loc;
+
+    for(u16 i = 1; i<this->num_records+1; i++){
+        size = this->num_records;
+        loc = this->end_free;
+        this->get_header(size,loc,i);
+        if(loc != 0){
+            IDs->push_back(i);
+        }
+    }
+    return IDs;
+}
 
 //Protected Methods for SlottedPage
 //________________
@@ -106,7 +140,25 @@ bool SlottedPage::has_room(u_int16_t size){
     return size <= available;
 }
 
-void SlottedPage::slide(u_int16_t start, u_int16_t end);
+void SlottedPage::slide(u_int16_t start, u_int16_t end){
+    u16 shift = end - start;
+    if(shift == 0){
+        return
+    }
+    memcpy(this->address(this->end_free+1+shift),(memcpy(this->address(this->end_free +1),data.get_data(),start),end);
+
+     for(u16 i = 0; i <this->num_records; i++){
+         u16 size;
+         u16 loc;
+         this->get_header(&size,&loc,this->ids()->at(i));
+         if(loc <= start){
+             loc += shift;
+             this->put_header(this->ids()->at(i),size, loc;
+         }
+     }
+     this->end_free += shift;
+     this->put_header();
+}
 
 // Put a 2-byte integer at given offset in block.
 void SlottedPage::put_n(u16 offset, u16 n) {
