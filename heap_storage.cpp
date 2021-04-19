@@ -1,4 +1,5 @@
 #include "heap_storage.h"
+#include "db_cxx.h"
 
 typedef u_int16_t u16;
 
@@ -189,31 +190,64 @@ void SlottedPage::put_header(RecordID id, u16 size, u16 loc) {
 HeapFile(std::string name) : DbFile(name), dbfilename(""), last(0), closed(true), db(_DB_ENV, 0) {}
 
 void HeapFile::db_open(uint flags){
+    if(!this->closed){
+        return;
+    }
+    this->db.set_re_len(DbBlock::BLOCK_SZ);
+    this->dbfilename = this->name + ".db";
+    this->db.open(nullptr, this->dbfilename.c_str(),nullptr,DB_RECNO,flags,06444);
 
+    if(flags ==0){
+        DB_BTREE_STAT stat;
+        this->db.stat(nullptr,&stat,DB_FAST_STAT);
+        this->last = stat.bt_ndata;
+    }else{
+        this->last;
+    }
+    this->closed = false;
 }
 
 void HeapFile::create(void){
-
+   this->db_open(DB_CREATE | DB_EXCL);
+   SlottedPage* block = get_new();
+   this->put(block);
 }
 
+//delete function
 void HeapFile::drop(void){
-
+    this->open();
+    this->close();
+    remove(this->dbfilename.c_str());
 }
 
 void HeapFile::open(void){
-
+    this->db_open();
+    //???????
 }
 
 void HeapFile::close(void){
-
+    this->db.close(0);
+    this->closed = true;
 }
 
+//still working on this
 SlottedPage* HeapFile::get_new(void){
+    char block[BLOCK_SZ];
+    //creates a place in memory for block
+    memset(block,0,sizeof(block));
+    Dbt data(block,sizeof(block));
 
+    this->last += 1;
+
+    return new SlottedPage(data,this->last,true);
+    
 }
 
 SlottedPage* HeapFile::get(BlockID block_id){
-    
+    Dbt key(&block_id, sizeof(block_id));
+    Dbt data;
+    this->db.get(nullptr, &key,&data,0);
+    return new SlottedPage(data,block_id,false);
 }
 
 void HeapFile::put(DbBlock *block){
