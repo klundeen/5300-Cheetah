@@ -19,9 +19,9 @@ No problems with this code in this section. It works how it is intended. It pars
 This milestone actually stores the data for our database in this class using a heap store engine.
 
 We use the abstract class provided by the instructor to implment the database. 
-1. DbBlock: Dblock is how records are stored and modified within the blocks that it creates.
-2. DbFile: DbFile handles the collection of blocks making up the relation as well as file creation, deletion, and access. It uses a DbBlock class for individual blocks and a block manager for managing moving blocks to/from disk.
-3. DbRelation: DbRelation represents a logical view of the tables we have created.
+1. DbBlock: is how records are stored and modified within the blocks that it creates.
+2. DbFile: handles the collection of blocks making up the relation as well as file creation, deletion, and access. It uses a DbBlock class for individual blocks and a block manager for managing moving blocks to/from disk.
+3. DbRelation: represents a logical view of the tables we have created.
 
 These abstract classes relate to the ones we wrote for milestone 2 respectively(number correlated)
 1. SlottedPage
