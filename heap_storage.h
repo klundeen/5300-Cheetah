@@ -82,7 +82,8 @@ protected:
  */
 class HeapFile : public DbFile {
 public:
-    HeapFile(std::string name) : DbFile(name), dbfilename(""), last(0), closed(true), db(_DB_ENV, 0) {}
+   
+    HeapFile(std::string name);
 
     virtual ~HeapFile() {}
 
@@ -119,6 +120,7 @@ protected:
     Db db;
 
     virtual void db_open(uint flags = 0);
+	virtual uint32_t get_block_count();
 };
 
 /**
@@ -173,7 +175,7 @@ protected:
     virtual Dbt *marshal(const ValueDict *row);
 
     virtual ValueDict *unmarshal(Dbt *data);
+	
 };
-
 bool test_heap_storage();
 
