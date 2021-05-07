@@ -6,7 +6,7 @@ INCLUDE_DIR = $(COURSE)/include
 LIB_DIR     = $(COURSE)/lib
 
 # following is a list of all the compiled object files needed to build the sql5300 executable
-OBJS       = sql5300.o heap_storage.o ParseTreeToString.o SQLExec.o schema_tables.o storage_engine.o
+OBJS       = sql5300.o SlottedPage.o HeapFile.o HeapTable.o ParseTreeToString.o SQLExec.o schema_tables.o storage_engine.o
 
 # Rule for linking to create the executable
 # Note that this is the default target since it is the first non-generic one in the Makefile: $ make
@@ -15,11 +15,14 @@ sql5300: $(OBJS)
 
 # In addition to the general .cpp to .o rule below, we need to note any header dependencies here
 # idea here is that if any of the included header files changes, we have to recompile
+HEAP_STORAGE_H = heap_storage.h SlottedPage.h HeapFile.h HeapTable.h storage_engine.h
 SCHEMA_TABLES_H = schema_tables.h $(HEAP_STORAGE_H)
 SQLEXEC_H = SQLExec.h $(SCHEMA_TABLES_H)
 ParseTreeToString.o : ParseTreeToString.h
 SQLExec.o : $(SQLEXEC_H)
-heap_storage.o : heap_storage.h
+SlottedPage.o : SlottedPage.h
+HeapFile.o : HeapFile.h SlottedPage.h
+HeapTable.o : $(HEAP_STORAGE_H)
 schema_tables.o : $(SCHEMA_TABLES_) ParseTreeToString.h
 sql5300.o : $(SQLEXEC_H) ParseTreeToString.h
 storage_engine.o : storage_engine.h

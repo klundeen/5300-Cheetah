@@ -1,7 +1,5 @@
-# 5300-Cheetah
-Cheetah's DB Relation Manager project for CPSC5300/4300 at Seattle U, Spring 2021
-<br>
-Sprint 1: Ryan Bush and Nick Nguyen 
+# 5300-Instructor
+Instructor's DB Relation Manager project for CPSC5300/4300 at Seattle U, Spring 2021
 
 Usage (argument is database directory):
 <pre>
@@ -11,30 +9,23 @@ $ ./sql5300 ~/cpsc5300/data
 ## Tags
 - <code>Milestone1</code> is playing around with the AST returned by the HyLine parser and general setup of the command loop.
 - <code>Milestone2h</code> has the intructor-provided files for Milestone2. (Note that heap_storage.cpp is just a stub.)
+- <code>Milestone2</code> is the instructor's attempt to complete the Milestone 2 assignment.
+- <code>Milestone3_prep</code> has the instructor-provided files for Milestone 3. The students' work is in <code>SQLExec.cpp</code> labeled with <code>FIXME</code>.
+- <code>Milestone3</code> has the instructor's attempt to complete the Milestone 3 assignment.
+- <code>Milestone4_prep</code> has the instructor-provided files for Milestone4 (this was all actually in Milestone3, too, by mistake).
+## Unit Tests
+There are some tests for SlottedPage and HeapTable. They can be invoked from the <code>SQL</code> prompt:
+```sql
+SQL> test
+```
+Be aware that failed tests may leave garbage Berkeley DB files lingering in your data directory. If you don't care about any data in there, you are advised to just delete them all after a failed test.
+```sh
+$ rm -f data/*
+```
 
-### Sprint 1: Milestone 1 Skeleton
-No problems with this code in this section. It works how it is intended. It parses mySQL statements passed in by the user. The file name is "sql5300.cpp" for the parser in the repository.
-
-### Sprint 1: Milestone 2 Rudimentary Storage Engine
-This milestone actually stores the data for our database in this class using a heap store engine.
-
-We use the abstract class provided by the instructor to implment the database. 
-1. DbBlock: is how records are stored and modified within the blocks that it creates.
-2. DbFile: handles the collection of blocks making up the relation as well as file creation, deletion, and access. It uses a DbBlock class for individual blocks and a block manager for managing moving blocks to/from disk.
-3. DbRelation: represents a logical view of the tables we have created.
-
-These abstract classes relate to the ones we wrote for milestone 2 respectively(number correlated)
-1. SlottedPage
-2. HeapFile
-3. HeapTable
-
-## Pass off to next group
-- There is something wrong when we insert, the flags in the function db.open() in the HeapFile class. It creates the error message of "terminate called after throwing an instance of 'DbException'
-  what():  Db::get: Invalid argument". We think it fails in our HeapFile get function. 
-  
- - Did not implement the following functions in HeapTable:
- - virtual void del(const Handle handle);
- - virtual Handles *select();
- - virtual ValueDict *project(Handle handle);
- - virtual ValueDict *project(Handle handle, const ColumnNames *column_names);
- - virtual ValueDict *unmarshal(Dbt *data);
+## Valgrind (Linux)
+To run valgrind (files must be compiled with <code>-ggdb</code>):
+```sh
+$ valgrind --leak-check=full --suppressions=valgrind.supp ./sql5300 data
+```
+Note that we've added suppression for the known issues with the Berkeley DB library <em>vis-à-vis</em> valgrind.
