@@ -221,7 +221,38 @@ QueryResult *SQLExec::show(const ShowStatement *statement) {
 }
 
 QueryResult *SQLExec::show_index(const ShowStatement *statement) {
-    return new QueryResult("not implemented"); // FIXME
+	DbRelation &index = SQLExec::tables->get_table(Indices::TABLE_NAME);
+	
+	ColumnNames *column_names = new ColumnNames;
+	column_names->push_back("table_name");
+    column_names->push_back("index_name");
+    column_names->push_back("seq_in_index");
+    column_names->push_back("column_name");
+    column_names->push_back("index_type");
+    column_names->push_back("is_unique");
+	
+	ColumnAttributes *column_attributes = new ColumnAttributes;
+	ColumnAttribute ca(ColumnAttribute::TEXT);
+    column_attributes->push_back(ca); // table_name
+	column_attributes->push_back(ca); // index_name
+	ca.set_data_type(ColumnAttribute::INT);
+	column_attributes->push_back(ca); // seq_in_index
+	ca.set_data_type(ColumnAttribute::TEXT);
+	column_attributes->push_back(ca); // column_name
+	column_attributes->push_back(ca); // index_type
+	ca.set_data_type(ColumnAttribute::BOOLEAN);
+	column_attributes->push_back(ca); // is_unique
+	
+	ValueDict where;
+    where["table_name"] = Value(statement->tableName);
+	Handles *handles = index.select(&where);
+    u_long n = handles->size();
+	ValueDicts *rows = new ValueDicts;
+    for (auto const &handle: *handles) {
+        ValueDict *row = index.project(handle, column_names);
+        rows->push_back(row);
+    }
+    return new QueryResult(column_names, column_attributes, rows, "successfully returned " + to_string(n) + " rows"); // FIXME
 }
 
 QueryResult *SQLExec::show_tables() {

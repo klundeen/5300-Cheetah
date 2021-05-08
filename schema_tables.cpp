@@ -263,7 +263,7 @@ Handle Columns::insert(const ValueDict *row) {
  */
 const Identifier Indices::TABLE_NAME = "_indices";
 std::map<std::pair<Identifier, Identifier>, DbIndex *> Indices::index_cache;
-
+//Protected
 // get the column name for _indices column
 ColumnNames &Indices::COLUMN_NAMES() {
     static ColumnNames cn;
@@ -277,7 +277,7 @@ ColumnNames &Indices::COLUMN_NAMES() {
     }
     return cn;
 }
-
+//Protected
 // get the column attribute for _indices column
 ColumnAttributes &Indices::COLUMN_ATTRIBUTES() {
     static ColumnAttributes cas;
