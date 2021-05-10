@@ -62,6 +62,7 @@ QueryResult *SQLExec::execute(const SQLStatement *statement) {
     // initialize _tables table, if not yet present
     if (SQLExec::tables == nullptr)
         SQLExec::tables = new Tables();
+		SQLExec::indices = new Indices();
 
     try {
         switch (statement->type()) {
@@ -251,7 +252,8 @@ QueryResult *SQLExec::show(const ShowStatement *statement) {
 }
 
 QueryResult *SQLExec::show_index(const ShowStatement *statement) {
-	DbRelation &index = SQLExec::tables->get_table(Indices::TABLE_NAME);
+	
+	Identifier table_name = statement->tableName;
 	
 	ColumnNames *column_names = new ColumnNames;
 	column_names->push_back("table_name");
@@ -262,27 +264,28 @@ QueryResult *SQLExec::show_index(const ShowStatement *statement) {
     column_names->push_back("is_unique");
 	
 	ColumnAttributes *column_attributes = new ColumnAttributes;
-	ColumnAttribute ca(ColumnAttribute::TEXT);
-    column_attributes->push_back(ca); // table_name
-	column_attributes->push_back(ca); // index_name
-	ca.set_data_type(ColumnAttribute::INT);
-	column_attributes->push_back(ca); // seq_in_index
-	ca.set_data_type(ColumnAttribute::TEXT);
-	column_attributes->push_back(ca); // column_name
-	column_attributes->push_back(ca); // index_type
-	ca.set_data_type(ColumnAttribute::BOOLEAN);
-	column_attributes->push_back(ca); // is_unique
+	column_attributes->push_back(ColumnAttribute(ColumnAttribute::TEXT)); // everything
 	
 	ValueDict where;
     where["table_name"] = Value(statement->tableName);
-	Handles *handles = index.select(&where);
-    u_long n = handles->size();
+	
+	Handles *handles = SQLExec::indices->select();
+
 	ValueDicts *rows = new ValueDicts;
     for (auto const &handle: *handles) {
-        ValueDict *row = index.project(handle, column_names);
-        rows->push_back(row);
+        ValueDict *row = SQLExec::indices -> project(handle,column_names);
+		Identifier table_name = row->at("index_name").s;
+
+        //check if the table not present in Table's or Column's TABLE_NAME
+        if (table_name != Tables::TABLE_NAME && table_name != Columns::TABLE_NAME) {
+			rows->push_back(row);
+		} else {
+			delete row;
+		}
     }
-    return new QueryResult(column_names, column_attributes, rows, "successfully returned " + to_string(n) + " rows"); // FIXME
+	u_long n = rows->size();
+	delete handles;
+    return new QueryResult(column_names, column_attributes, rows, "successfully returned " + to_string(n) + " rows");
 }
 
 QueryResult *SQLExec::show_tables() {
