@@ -164,7 +164,7 @@ QueryResult *SQLExec::create_index(const CreateStatement *statement) {
 	Identifier index_name = statement->indexName;
 	Identifier index_type;
 	bool is_unique;
-	//For now, assume true if indexType is BTREE and false otherwise (using HASH)                                                                                                
+	                                                                                                
 	try{
 		index_type = statement->indexType;
 	} catch (exception& e) {
@@ -182,7 +182,7 @@ QueryResult *SQLExec::create_index(const CreateStatement *statement) {
 	row["seq_in_index"] = 0;
 	row["index_type"] = index_type;
 	row["is_unique"] = is_unique;
-	//cout<< "Index creating..."<<endl;                                                                                                                     
+	                                                                                                                     
 	for (auto const& column_name : *statement->indexColumns) {
 		row["seq_in_index"].n += 1;
 		row["column_name"] = string(column_name);
