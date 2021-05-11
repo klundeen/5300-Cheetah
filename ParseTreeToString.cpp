@@ -226,9 +226,9 @@ string ParseTreeToString::create(const CreateStatement *stmt) {
     } else if (stmt->type == CreateStatement::kIndex) {
         ret += "INDEX ";
         ret += string(stmt->indexName) + " ON ";
-        ret += string(stmt->tableName) + " USING " + stmt->indexType + " (";
-        ret += string(stmt->indexName) + " ON ";
-        ret += string(stmt->tableName) + " USING " + stmt->indexType + " (";
+        ret += string(stmt->tableName) + " USING " + stmt->indexType; // + " (";
+        //ret += string(stmt->indexName) + " ON ";
+        ret += /*string(stmt->tableName) + " USING " + stmt->indexType +*/ " (";
         bool doComma = false;
         for (auto const &col : *stmt->indexColumns) {
             if (doComma)
@@ -248,6 +248,9 @@ string ParseTreeToString::drop(const DropStatement *stmt) {
     switch (stmt->type) {
         case DropStatement::kTable:
             ret += "TABLE ";
+            break;
+        case DropStatement::kIndex:
+          ret += "INDEX " + string(stmt->indexName) + " FROM ";
             break;
         default:
             ret += "? ";
