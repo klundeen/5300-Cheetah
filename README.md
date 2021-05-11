@@ -9,7 +9,7 @@ $ ./sql5300 ~/cpsc5300/data
 
 ## New Methods Added - all function without errors
 MS3 methods: CREATE TABLE, DROP TABLE, SHOW TABLES, SHOW COLUMNS 
-\nMS4 methods: CREATE INDEX, SHOW INDEX, DROP INDEX
+MS4 methods: CREATE INDEX, SHOW INDEX, DROP INDEX
 
 ## Unit Tests
 There are some tests for SlottedPage and HeapTable. They can be invoked from the <code>SQL</code> prompt:
