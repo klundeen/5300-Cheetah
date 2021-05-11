@@ -7,6 +7,10 @@ Usage (argument is database directory):
 $ ./sql5300 ~/cpsc5300/data
 </pre>
 
+## Implemented Methods All functioning and Working Properly
+MS3 methods: CREATE TABLE, DROP TABLE, SHOW TABLES, SHOW COLUMNS 
+MS4 methods: CREATE INDEX, SHOW INDEX, DROP INDEX
+
 ## Unit Tests
 There are some tests for SlottedPage and HeapTable. They can be invoked from the <code>SQL</code> prompt:
 ```sql
