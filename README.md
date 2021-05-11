@@ -1,6 +1,7 @@
 # 5300-Cheetah
 DB Relation Manager project
 
+
 Usage (argument is database directory):
 <pre>
 $ ./sql5300 ~/cpsc5300/data
