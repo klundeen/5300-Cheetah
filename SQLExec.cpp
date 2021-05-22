@@ -72,12 +72,30 @@ QueryResult *SQLExec::execute(const SQLStatement *statement) {
                 return drop((const DropStatement *) statement);
             case kStmtShow:
                 return show((const ShowStatement *) statement);
+            case kStmtInsert:
+                return insert((const InsertStatement *) statement);
+            case kStmtDelete:
+                return del((const DeleteStatement *) statement);
+            case kStmtSelect:
+                return select((const SelectStatement *) statement);
             default:
                 return new QueryResult("not implemented");
         }
     } catch (DbRelationError &e) {
         throw SQLExecError(string("DbRelationError: ") + e.what());
     }
+}
+
+QueryResult *SQLExec::insert(const InsertStatement *statement) {
+    return new QueryResult("INSERT statement not yet implemented");  // FIXME
+}
+
+QueryResult *SQLExec::del(const DeleteStatement *statement) {
+    return new QueryResult("DELETE statement not yet implemented");  // FIXME
+}
+
+QueryResult *SQLExec::select(const SelectStatement *statement) {
+    return new QueryResult("SELECT statement not yet implemented");  // FIXME
 }
 
 void
@@ -160,37 +178,45 @@ QueryResult *SQLExec::create_table(const CreateStatement *statement) {
 }
 
 QueryResult *SQLExec::create_index(const CreateStatement *statement) {
+    Identifier index_name = statement->indexName;
     Identifier table_name = statement->tableName;
-	Identifier index_name = statement->indexName;
-	Identifier index_type;
-	bool is_unique;
-	                                                                                                
-	try{
-		index_type = statement->indexType;
-	} catch (exception& e) {
-		index_type = "BTREE";
-	}	
-	if (index_type == "BTREE") {
-		is_unique = true;
-	} else if(index_type == "HASH") {
-		is_unique = false;
-	}
-	Handles column_handles;
-	ValueDict row;
-	row["table_name"] = table_name;
-	row["index_name"] = index_name;
-	row["seq_in_index"] = 0;
-	row["index_type"] = index_type;
-	row["is_unique"] = is_unique;
-	                                                                                                                     
-	for (auto const& column_name : *statement->indexColumns) {
-		row["seq_in_index"].n += 1;
-		row["column_name"] = string(column_name);
-		column_handles.push_back(SQLExec::indices->insert(&row));
-	}
-	DbIndex& index = SQLExec::indices->get_index(table_name,index_name);
-	index.create();
-	return new QueryResult("CREATED INDEX "+ index_name);
+
+    // get underlying relation
+    DbRelation &table = SQLExec::tables->get_table(table_name);
+
+    // check that given columns exist in table
+    const ColumnNames &table_columns = table.get_column_names();
+    for (auto const &col_name: *statement->indexColumns)
+        if (find(table_columns.begin(), table_columns.end(), col_name) == table_columns.end())
+            throw SQLExecError(string("Column '") + col_name + "' does not exist in " + table_name);
+
+    // insert a row for every column in index into _indices
+    ValueDict row;
+    row["table_name"] = Value(table_name);
+    row["index_name"] = Value(index_name);
+    row["index_type"] = Value(statement->indexType);
+    row["is_unique"] = Value(string(statement->indexType) == "BTREE"); // assume HASH is non-unique --
+    int seq = 0;
+    Handles i_handles;
+    try {
+        for (auto const &col_name: *statement->indexColumns) {
+            row["seq_in_index"] = Value(++seq);
+            row["column_name"] = Value(col_name);
+            i_handles.push_back(SQLExec::indices->insert(&row));
+        }
+
+        DbIndex &index = SQLExec::indices->get_index(table_name, index_name);
+        index.create();
+
+    } catch (...) {
+        // attempt to remove from _indices
+        try {  // if any exception happens in the reversal below, we still want to re-throw the original ex
+            for (auto const &handle: i_handles)
+                SQLExec::indices->del(handle);
+        } catch (...) {}
+        throw;  // re-throw the original exception (which should give the client some clue as to why it did
+    }
+    return new QueryResult("created index " + index_name);
 }
 
 // DROP ...

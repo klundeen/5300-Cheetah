@@ -48,5 +48,7 @@ private:
     static std::string drop(const hsql::DropStatement *stmt);
 
     static std::string show(const hsql::ShowStatement *stmt);
+
+    static std::string del(const hsql::DeleteStatement *stmt);
 };
 
