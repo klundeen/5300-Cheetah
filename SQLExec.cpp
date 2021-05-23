@@ -4,6 +4,8 @@
  * @see "Seattle University, CPSC5300, Spring 2021"
  */
 #include "SQLExec.h"
+#include "EvalPlan.h"
+#include "ParseTreeToString.h"
 
 using namespace std;
 using namespace hsql;
@@ -94,8 +96,44 @@ QueryResult *SQLExec::del(const DeleteStatement *statement) {
     return new QueryResult("DELETE statement not yet implemented");  // FIXME
 }
 
+// SQLExecQuery in py
 QueryResult *SQLExec::select(const SelectStatement *statement) {
-    return new QueryResult("SELECT statement not yet implemented");  // FIXME
+    Identifier table_name = statement->tableName;
+    DbRelation& table = tables->get_table(table_name);
+    ColumnNames column_names;
+    
+
+    for (auto const column : table.get_column_names()) {
+        column_names.push_back(column);
+    }
+
+    EvalPlan* plan = new EvalPlan(table);
+    ValueDict* where = new ValueDict;
+    if (statement->expr != NULL) {
+        try {
+            where = get_where_conjunction(statement->expr, &column_names);
+        } catch (exception &e) {
+            throw;
+        }
+        plan = new EvalPlan(where, plan);
+    }
+
+
+    // make the evaluation plan
+    EvalPlan* plan = new EvalPlan(table); 
+
+    // execute
+
+    return new QueryResult(plan.get_column_names(), plan.get_column_attributes(), rows,
+                'successfully returned ' + string(len(rows)) + ' rows'); 
+}
+
+ValueDict* get_where_conjunction(const Expr* expr, const ColumnNames* col_names)
+{
+    ValueDict* rows = new ValueDict;
+
+
+    return rows;
 }
 
 void
