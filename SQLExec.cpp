@@ -13,6 +13,7 @@ using namespace hsql;
 // define static data
 Tables *SQLExec::tables = nullptr;
 Indices *SQLExec::indices = nullptr;
+
 // make query result be printable
 ostream &operator<<(ostream &out, const QueryResult &qres) {
     if (qres.column_names != nullptr) {
@@ -59,12 +60,11 @@ QueryResult::~QueryResult() {
     }
 }
 
-
 QueryResult *SQLExec::execute(const SQLStatement *statement) {
     // initialize _tables table, if not yet present
     if (SQLExec::tables == nullptr)
         SQLExec::tables = new Tables();
-		SQLExec::indices = new Indices();
+        SQLExec::indices = new Indices();
 
     try {
         switch (statement->type()) {
@@ -88,17 +88,179 @@ QueryResult *SQLExec::execute(const SQLStatement *statement) {
     }
 }
 
+/**
+ * Inserts the data into the table.
+ * @param statement : InsertStatement
+ * @return QueryResult
+ */
 QueryResult *SQLExec::insert(const InsertStatement *statement) {
-    return new QueryResult("INSERT statement not yet implemented");  // FIXME
+    // // get the table and construct ValueDict
+    Identifier table_name = statement->tableName;
+    DbRelation &table = SQLExec::tables->get_table(table_name);
+    ValueDict row;
+    
+    // checking values/columns provided match the columns of the table
+    const ColumnNames &const_table_columns = table.get_column_names();
+    ColumnNames table_columns = const_table_columns;
+    const ColumnAttributes &const_column_attr = table.get_column_attributes();
+    ColumnAttributes table_attr = const_column_attr;
+    
+    if(table_columns.size() != statement->values->size()) {
+        throw SQLExecError("DbRelationError: Don't know how to handle NULLs, defaults, etc. yet");
+    }
+
+    // if column names are provided, map column names to values in order
+    if(statement->columns != NULL) {
+        for(size_t i = 0; i < statement->columns->size(); i++) {
+            Identifier columnName = statement->columns->at(i);
+
+            int index;
+            auto it = find(table_columns.begin(), table_columns.end(), columnName);
+            if(it != table_columns.end())
+                index = it - table_columns.begin();
+            else
+                throw SQLExecError("Invalid column name");
+
+            // use index to lookup datatype in column attributes
+            if(table_attr[index].get_data_type() == ColumnAttribute::INT)
+                row[columnName] = Value(statement->values->at(i)->ival);
+            else
+                row[columnName] = Value(statement->values->at(i)->name);
+        }
+    }
+    //columns not provided then add to columns in table order
+    else {
+        for(size_t i = 0; i < table_columns.size(); i++) {
+            if(table_attr[i].get_data_type() == ColumnAttribute::INT)
+                row[table_columns.at(i)] = Value(statement->values->at(i)->ival);
+            else
+                row[table_columns.at(i)] = Value(statement->values->at(i)->name);
+        }
+    }
+
+    //do the insert
+    Handle insertHandle = table.insert(&row);
+    
+    //add to indices
+    IndexNames indices = SQLExec::indices->get_index_names(table_name);
+    int numberOfInd = 0;
+    for(Identifier indexName: indices) {
+        numberOfInd++;
+        DbIndex &index = SQLExec::indices->get_index(table_name, indexName);
+        index.insert(insertHandle);
+    }
+
+    string ret = string("successfully inserted 1 row into ") + string(table_name) + string(" and ") + to_string(numberOfInd) + string(" indices");
+    return new QueryResult(ret); 
 }
 
-QueryResult *SQLExec::del(const DeleteStatement *statement) {
-    return new QueryResult("DELETE statement not yet implemented");  // FIXME
+/**
+ * Pulls equality predicates, AND operations and parse tree
+ */
+ValueDict* get_where_conjunction(const hsql::Expr *expr, const ColumnNames *col_names) {
+    if(expr->type != kExprOperator)
+        throw DbRelationError("Operator is not supported");
+    
+    ValueDict* rows = new ValueDict;
+    
+    switch(expr->opType) {
+        case Expr::AND: {
+            ValueDict* ret = get_where_conjunction(expr->expr, col_names);
+            
+            if (ret != nullptr) {
+                rows->insert(ret->begin(), ret->end());
+            }
+
+            ret = get_where_conjunction(expr->expr2, col_names);
+            rows->insert(ret->begin(), ret->end());
+            break;
+            }
+        
+        case Expr::SIMPLE_OP: {
+            if(expr->opChar != '=')
+                throw DbRelationError("Only equality predicates currently supported");
+            
+            Identifier col = expr->expr->name;
+
+            if(find(col_names->begin(), col_names->end(), col) == col_names->end()){
+                throw DbRelationError("Unknown column " + col + "'");
+            }
+
+            if(expr->expr2->type == kExprLiteralString)
+                rows->insert(pair<Identifier, Value>(col, Value(expr->expr2->name)));
+            
+            else if(expr->expr2->type == kExprLiteralInt)
+                rows->insert(pair<Identifier, Value>(col, Value(expr->expr2->ival)));
+            
+            else
+                throw DbRelationError("Type is not supported");
+            break;
+            }
+        
+        default:
+            throw DbRelationError("Only support AND conjunctions");
+    }
+    return rows;
 }
+
+/**
+ * Delete the data from the table.
+ * @param statement : DeleteStatement
+ * @return QueryResult
+ */
+QueryResult *SQLExec::del(const DeleteStatement *statement) {
+    Identifier table_name = statement->tableName;
+    // get the table
+    DbRelation &table = SQLExec::tables->get_table(table_name);
+    ColumnNames column_names;
+
+    for (auto const column: table.get_column_names()){
+        column_names.push_back(column);
+    }
+
+    //make the evaluation plan
+    EvalPlan *plan = new EvalPlan(table);
+    ValueDict *where = new ValueDict;
+
+    if (statement->expr != nullptr) {
+        try {
+            where = get_where_conjunction(statement->expr, &column_names);
+        } catch (exception &e) {
+            throw;
+        }
+        plan = new EvalPlan(where, plan);
+
+    }
+    //and execute it to get a list of handles
+    EvalPlan *optd = plan->optimize();
+    EvalPipeline pipeline = optd->pipeline();
+
+    IndexNames index_names = SQLExec::indices->get_index_names(table_name);
+    Handles *handles = pipeline.second;
+    
+    u_long n = handles->size();
+    u_long numberOfInd = index_names.size();
+
+    //now delete all the handles
+    for( auto const &handle: *handles) {
+        for (unsigned int i = 0; i < index_names.size(); i++) {
+            DbIndex &index = SQLExec::indices->get_index(table_name, index_names[i]);
+            index.del(handle);
+        }
+    }
+    //remove from table
+    for (auto const& handle: *handles){
+        table.del(handle);
+    }
+
+    string ret = string("successfully deleted ") + to_string(n)+ string(" rows from ") + string(table_name) + string(" and ") + to_string(numberOfInd) + string(" indices");
+    return new QueryResult(ret);
+}
+
 
 // SQLExecQuery in py
 QueryResult *SQLExec::select(const SelectStatement *statement) {
-    Identifier table_name = statement->tableName;
+    Identifier table_name = statement->name;
     DbRelation& table = tables->get_table(table_name);
     ColumnNames column_names;
     
@@ -124,16 +286,7 @@ QueryResult *SQLExec::select(const SelectStatement *statement) {
 
     // execute
 
-    return new QueryResult(plan.get_column_names(), plan.get_column_attributes(), rows,
-                'successfully returned ' + string(len(rows)) + ' rows'); 
-}
-
-ValueDict* get_where_conjunction(const Expr* expr, const ColumnNames* col_names)
-{
-    ValueDict* rows = new ValueDict;
-
-
-    return rows;
+    return new QueryResult(plan.get_column_names(), plan.get_column_attributes(), rows, " successfully returned " + string(len(rows)) + " rows"); 
 }
 
 void
@@ -299,19 +452,19 @@ QueryResult *SQLExec::drop_table(const DropStatement *statement) {
 }
 
 QueryResult *SQLExec::drop_index(const DropStatement *statement) {
-	Identifier iname = statement->indexName;
-	Identifier name = statement->name;
-	ValueDict where;
+    Identifier iname = statement->indexName;
+    Identifier name = statement->name;
+    ValueDict where;
     where["table_name"] = name;
     where["index_name"] = iname;
-	DbIndex& index = SQLExec::indices->get_index(name,iname);
-	index.drop();
-	Handles *hands = SQLExec::indices->select(&where);
-	
-     for (auto const &handle: *hands) {
+    DbIndex& index = SQLExec::indices->get_index(name,iname);
+    index.drop();
+    Handles *hands = SQLExec::indices->select(&where);
+    
+    for (auto const &handle: *hands) {
         SQLExec::indices->del(handle);
     }
-	
+    
     return new QueryResult("Dropped index " + iname);
 }
 
@@ -329,39 +482,39 @@ QueryResult *SQLExec::show(const ShowStatement *statement) {
 }
 
 QueryResult *SQLExec::show_index(const ShowStatement *statement) {
-	
-	Identifier table_name = statement->tableName;
-	
-	ColumnNames *column_names = new ColumnNames;
-	column_names->push_back("table_name");
+    
+    Identifier table_name = statement->tableName;
+    
+    ColumnNames *column_names = new ColumnNames;
+    column_names->push_back("table_name");
     column_names->push_back("index_name");
     column_names->push_back("seq_in_index");
     column_names->push_back("column_name");
     column_names->push_back("index_type");
     column_names->push_back("is_unique");
-	
-	ColumnAttributes *column_attributes = new ColumnAttributes;
-	column_attributes->push_back(ColumnAttribute(ColumnAttribute::TEXT)); // everything
-	
-	ValueDict where;
+    
+    ColumnAttributes *column_attributes = new ColumnAttributes;
+    column_attributes->push_back(ColumnAttribute(ColumnAttribute::TEXT)); // everything
+    
+    ValueDict where;
     where["table_name"] = Value(statement->tableName);
-	
-	Handles *handles = SQLExec::indices->select();
+    
+    Handles *handles = SQLExec::indices->select();
 
-	ValueDicts *rows = new ValueDicts;
+    ValueDicts *rows = new ValueDicts;
     for (auto const &handle: *handles) {
         ValueDict *row = SQLExec::indices -> project(handle,column_names);
-		Identifier table_name = row->at("index_name").s;
+        Identifier table_name = row->at("index_name").s;
 
         //check if the table not present in Table's or Column's TABLE_NAME
         if (table_name != Tables::TABLE_NAME && table_name != Columns::TABLE_NAME) {
-			rows->push_back(row);
-		} else {
-			delete row;
-		}
+            rows->push_back(row);
+        } else {
+            delete row;
+        }
     }
-	u_long n = rows->size();
-	delete handles;
+    u_long n = rows->size();
+    delete handles;
     return new QueryResult(column_names, column_attributes, rows, "successfully returned " + to_string(n) + " rows");
 }
 
@@ -373,7 +526,7 @@ QueryResult *SQLExec::show_tables() {
     column_attributes->push_back(ColumnAttribute(ColumnAttribute::TEXT));
 
     Handles *handles = SQLExec::tables->select();
-    u_long n = handles->size() - 3;
+    //u_long n = handles->size() - 3;
 
     ValueDicts *rows = new ValueDicts;
     for (auto const &handle: *handles) {
@@ -384,6 +537,7 @@ QueryResult *SQLExec::show_tables() {
         else
             delete row;
     }
+    u_long n = rows->size();
     delete handles;
     return new QueryResult(column_names, column_attributes, rows, "successfully returned " + to_string(n) + " rows");
 }
