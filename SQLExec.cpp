@@ -94,7 +94,7 @@ QueryResult *SQLExec::execute(const SQLStatement *statement) {
  * @return QueryResult
  */
 QueryResult *SQLExec::insert(const InsertStatement *statement) {
-    // // get the table and construct ValueDict
+    // get the table and construct ValueDict
     Identifier table_name = statement->tableName;
     DbRelation &table = SQLExec::tables->get_table(table_name);
     ValueDict row;
@@ -258,7 +258,11 @@ QueryResult *SQLExec::del(const DeleteStatement *statement) {
 }
 
 
-// SQLExecQuery in py
+/**
+ * Selects the data from the table and shows it.
+ * @param statement : SelectStatement
+ * @return QueryResult
+ */
 QueryResult *SQLExec::select(const SelectStatement *statement) {
     Identifier table_name = statement->name;
     DbRelation& table = tables->get_table(table_name);
