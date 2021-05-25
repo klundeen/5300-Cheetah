@@ -30,3 +30,27 @@ To run valgrind (files must be compiled with <code>-ggdb</code>):
 $ valgrind --leak-check=full --suppressions=valgrind.supp ./sql5300 data
 ```
 Note that we've added suppression for the known issues with the Berkeley DB library <em>vis-à-vis</em> valgrind.
+
+---
+
+## Sprint Invierno 
+Team: Priyanka Patil, Yinhui Li
+### New Methods Added - all function without errors
+MS5 implemented methods: SELECT FROM TABLE, INSERT INTO TABLE, DELETE FROM TBALE  
+MS6 implemented methods:  
+
+On cs1, 
+```
+$ cd cpsc5300
+$ git clone https://github.com/klundeen/5300-Cheetah.git
+$ git checkout tags/Milestone5
+$ git checkout tags/Milestone6
+$ make
+$ ./sql5300 ~/cpsc5300/data
+```
+
+#### Our Handoff Video
+
+
+---
+
