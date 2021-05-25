@@ -123,7 +123,7 @@ Handles *HeapTable::select(const ValueDict *where) {
         for (auto const &record_id: *record_ids) {
             Handle handle(block_id, record_id);
             if (selected(handle, where))
-                handles->push_back(Handle);//(block_id, record_id));
+                handles->push_back(handle);//(block_id, record_id));
         }
         delete record_ids;
         delete block;

@@ -264,37 +264,42 @@ QueryResult *SQLExec::del(const DeleteStatement *statement) {
  * @return QueryResult
  */
 QueryResult *SQLExec::select(const SelectStatement *statement) {
-    Identifier table_name = statement->fromTable->name;
+        Identifier table_name = statement->fromTable->name;
     DbRelation& table = tables->get_table(table_name);
 
-    // make the evaluation plan with selection
+    ColumnNames column_names;
+    for (auto const column : table.get_column_names()) {
+        column_names.push_back(column);
+    }
+
+    // make the evaluation plan with selection                                                                                            
     EvalPlan* plan = new EvalPlan(table);
     if (statement->whereClause != nullptr) {
-        plan = new EvalPlan(get_where_conjunction(statement->whereClause), plan);
+      plan = new EvalPlan(get_where_conjunction(statement->whereClause, &column_names), plan);
     }
 
     ColumnAttributes* colAttributes = new ColumnAttributes;
     ColumnNames* colNames = new ColumnNames;
-    // check if the select type is *, then evaluates for all the columns
+    // check if the select type is *, then evaluates for all the columns                                                                  
     if (statement->selectList->at(0)->type == kExprStar) {
         *colNames = table.get_column_names();
         *colAttributes = table.get_column_attributes();
         plan = new EvalPlan(EvalPlan::ProjectAll, plan);
     }
     else {
-        // certain columns are selected, then evaluates these columns
+        // certain columns are selected, then evaluates these columns                                                                     
         for (auto const& col : *statement->selectList) {
             colNames->push_back(col->name);
         }
-        *colAttributes = *table.get_column_attributes(*columnNames);
+        *colAttributes = *table.get_column_attributes(*colNames);
         plan = new EvalPlan(colNames, plan);
     }
-    // get the optimized plan
-    EvalPlan* optimized = plan->optimized();
+    // get the optimized plan                                                                                                             
+    EvalPlan* optimized = plan->optimize();
 
-    // execute
+    // execute                                                                                                                            
     ValueDicts* rows = optimized->evaluate();
-    return new QueryResult(colNames, colAttributes, rows, " successfully returned " + to_string(rows->size()) + " rows"); 
+    return new QueryResult(colNames, colAttributes, rows, "successfully returned " + to_string(rows->size()) + " rows");
 }
 
 void
