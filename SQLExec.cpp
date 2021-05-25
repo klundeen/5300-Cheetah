@@ -264,33 +264,37 @@ QueryResult *SQLExec::del(const DeleteStatement *statement) {
  * @return QueryResult
  */
 QueryResult *SQLExec::select(const SelectStatement *statement) {
-    Identifier table_name = statement->name;
+    Identifier table_name = statement->fromTable->name;
     DbRelation& table = tables->get_table(table_name);
-    ColumnNames column_names;
-    
 
-    for (auto const column : table.get_column_names()) {
-        column_names.push_back(column);
-    }
-
+    // make the evaluation plan with selection
     EvalPlan* plan = new EvalPlan(table);
-    ValueDict* where = new ValueDict;
-    if (statement->expr != NULL) {
-        try {
-            where = get_where_conjunction(statement->expr, &column_names);
-        } catch (exception &e) {
-            throw;
-        }
-        plan = new EvalPlan(where, plan);
+    if (statement->whereClause != nullptr) {
+        plan = new EvalPlan(get_where_conjunction(statement->whereClause), plan);
     }
 
-
-    // make the evaluation plan
-    EvalPlan* plan = new EvalPlan(table); 
+    ColumnAttributes* colAttributes = new ColumnAttributes;
+    ColumnNames* colNames = new ColumnNames;
+    // check if the select type is *, then evaluates for all the columns
+    if (statement->selectList->at(0)->type == kExprStar) {
+        *colNames = table.get_column_names();
+        *colAttributes = table.get_column_attributes();
+        plan = new EvalPlan(EvalPlan::ProjectAll, plan);
+    }
+    else {
+        // certain columns are selected, then evaluates these columns
+        for (auto const& col : *statement->selectList) {
+            colNames->push_back(col->name);
+        }
+        *colAttributes = *table.get_column_attributes(*columnNames);
+        plan = new EvalPlan(colNames, plan);
+    }
+    // get the optimized plan
+    EvalPlan* optimized = plan->optimized();
 
     // execute
-
-    return new QueryResult(plan.get_column_names(), plan.get_column_attributes(), rows, " successfully returned " + string(len(rows)) + " rows"); 
+    ValueDicts* rows = optimized->evaluate();
+    return new QueryResult(colNames, colAttributes, rows, " successfully returned " + to_string(rows->size()) + " rows"); 
 }
 
 void
