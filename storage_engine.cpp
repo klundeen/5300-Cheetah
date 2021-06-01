@@ -68,3 +68,32 @@ ValueDicts *DbRelation::project(Handles *handles, const ValueDict *where) {
     return ret;
 }
 
+bool Value::operator<(const Value &other) const {
+    if (this->data_type != other.data_type) {
+        // arbitrary ordering of data types: BOOLEAN < INT < TEXT
+        if (this->data_type == ColumnAttribute::BOOLEAN)
+            return true;
+        if (other.data_type == ColumnAttribute::BOOLEAN)
+            return false;
+        if (this->data_type == ColumnAttribute::INT)
+            return true;
+        if (other.data_type == ColumnAttribute::INT)
+            return false;
+        return false; // should never reach this
+    }
+    if (this->data_type == ColumnAttribute::TEXT)
+        return this->s < other.s;
+    return this->n < other.n;
+}
+
+std::ostream &operator<<(std::ostream &out, const Value &value) {
+    if (value.data_type == ColumnAttribute::DataType::TEXT)
+        out << value.s;
+    else if (value.data_type == ColumnAttribute::DataType::INT)
+        out << value.n;
+    else if (value.n)
+        out << "true";
+    else
+        out << "false";
+    return out;
+}

@@ -143,7 +143,7 @@ void SlottedPage::put_header(RecordID id, u16 size, u16 loc) {
  * @return       true if there is enough room, false otherwise
  */
 bool SlottedPage::has_room(u16 size) const {
-    return 4 * (this->num_records + 1) + size <= this->end_free;
+    return size + (u16)4 <= this->unused_bytes();
 }
 
 /**
@@ -366,4 +366,42 @@ bool test_slotted_page() {
     }
     delete[] data;
     return true;
+}
+
+/**
+ * Erase all the records
+ */
+void SlottedPage::clear() {
+    this->num_records = 0;
+    this->end_free = DbBlock::BLOCK_SZ - 1;
+    put_header();
+}
+
+/**
+ * Count of non-deleted records
+ * @return number of current records
+ */
+u16 SlottedPage::size() const {
+    u16 size, loc;
+    u16 count = 0;
+    for (RecordID record_id = 1; record_id <= this->num_records; record_id++) {
+        get_header(size, loc, record_id);
+        if (loc != 0)
+            count++;
+    }
+    return count;
+}
+
+/**
+ * Get the number of bytes not currently used to store data or for overhead.
+ * @return number of bytes
+ */
+u16 SlottedPage::unused_bytes() const {
+    u16 headers = (u16) (4 * (this->num_records + 1));
+    u16 unused;
+    if (this->end_free <= headers)
+        unused = 0;
+    else
+        unused = this->end_free - headers;
+    return unused;
 }
