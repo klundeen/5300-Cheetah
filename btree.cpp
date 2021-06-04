@@ -74,18 +74,25 @@ Handles *BTreeIndex::lookup(ValueDict *key_dict) const {
 }
 
 // recursive _lookup for lookup
-Handles *_lookup(BTreeNode *node, uint height, const KeyValue *key) const {
+Handles *BTreeIndex::_lookup(BTreeNode *node, uint height, const KeyValue *key) const {
     // FIXME
-    auto *interior = dynamic_cast<BTreeInterior *>(node);
-    if() {
-        Handle handle = interior.// 
+    
+    if (height == 1) { { // base case: a leaf node
+        auto *leaf = dynamic_cast<BTreeLeaf *>(node); // leaf def in BTreeNode.h 
+        // Handle handle = leaf->find_eq(key);
+        try {
+            Handle handle = leaf->find_eq(key); // double check these 2 lines
+            handle->push_back(key, h); // check handle and handles
+        } catch(...) {
+            return nullptr;
+        }
 
     } else {
-        
-        Handles* handles = _insert(interior->find(key, height), height - 1, key);
+        auto *interior = dynamic_cast<BTreeInterior *>(node);
+        Handles* handles = _lookup(interior->find(key, height), height - 1, key);
         return handles;
     }
-    return nullptr
+    return nullptr;
 }
 
 Handles *BTreeIndex::range(ValueDict *min_key, ValueDict *max_key) const {
