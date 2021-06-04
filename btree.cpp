@@ -102,7 +102,9 @@ Handles *BTreeIndex::_lookup(BTreeNode *node, uint height, const KeyValue *key) 
 
     } else {
         auto *interior = dynamic_cast<BTreeInterior *>(node);
-        Handles* handles = this->_lookup(interior->find(key, height), height - 1, key);
+        auto *found = interior->find(key, height);
+        Handles* handles = this->_lookup(found, height - 1, key);
+        delete found;
         return handles;
     }
     return nullptr;
