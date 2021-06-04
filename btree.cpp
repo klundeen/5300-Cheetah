@@ -70,7 +70,7 @@ void BTreeIndex::close() {
 // Find all the rows whose columns are equal to key. Assumes key is a dictionary whose keys are the column
 // names in the index. Returns a list of row handles.
 Handles *BTreeIndex::lookup(ValueDict *key_dict) const {
-    return _lookup(root, stat->get_height(), tkey);
+    return this->_lookup(root, stat->get_height(), this->tkey(key_dict));
 }
 
 // recursive _lookup for lookup
@@ -78,18 +78,31 @@ Handles *BTreeIndex::_lookup(BTreeNode *node, uint height, const KeyValue *key) 
     // FIXME
     
     if (height == 1) { { // base case: a leaf node
+        Handles* handles = new Handles();
         auto *leaf = dynamic_cast<BTreeLeaf *>(node); // leaf def in BTreeNode.h 
-        // Handle handle = leaf->find_eq(key);
-        try {
-            Handle handle = leaf->find_eq(key); // double check these 2 lines
-            handle->push_back(key, h); // check handle and handles
-        } catch(...) {
+        Handle handle = leaf->find_eq(key);
+        if(handles->empty == false) {
+            handles->push_back(handle);
+            return handles;
+        } else {
             return nullptr;
         }
 
+        /*
+        try {
+            Handles* handles = new Handles();
+            auto *leaf = dynamic_cast<BTreeLeaf *>(node); // leaf def in BTreeNode.h 
+            Handle handle = leaf->find_eq(key);
+            handles->push_back(handle);
+            return handles;
+        } catch(...) {
+            return nullptr;
+        }
+        */
+
     } else {
         auto *interior = dynamic_cast<BTreeInterior *>(node);
-        Handles* handles = _lookup(interior->find(key, height), height - 1, key);
+        Handles* handles = this->_lookup(interior->find(key, height), height - 1, key);
         return handles;
     }
     return nullptr;

@@ -1,5 +1,7 @@
 {
     "files.associations": {
-        "iosfwd": "cpp"
+        "iosfwd": "cpp",
+        "__node_handle": "cpp",
+        "vector": "cpp"
     }
 }
