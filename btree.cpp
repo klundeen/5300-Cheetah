@@ -329,3 +329,4 @@ bool test_btree() {
     table.drop();
     return true;
 }
+
