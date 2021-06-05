@@ -112,7 +112,6 @@ Handles *BTreeIndex::_lookup(BTreeNode *node, uint height, const KeyValue *key) 
         } catch(...) {
             return nullptr;
         }
-        */
 
     } else {
         auto *interior = dynamic_cast<BTreeInterior *>(node);
@@ -124,7 +123,6 @@ Handles *BTreeIndex::_lookup(BTreeNode *node, uint height, const KeyValue *key) 
     return nullptr;
 }
 */
-
 Handles *BTreeIndex::range(ValueDict *min_key, ValueDict *max_key) const {
     throw DbRelationError("Don't know how to do a range query on Btree index yet");
     // FIXME
