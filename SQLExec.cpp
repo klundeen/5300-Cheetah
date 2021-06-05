@@ -423,6 +423,7 @@ QueryResult *SQLExec::create_index(const CreateStatement *statement) {
     return new QueryResult("created index " + index_name);
 }
 
+
 // DROP ...
 QueryResult *SQLExec::drop(const DropStatement *statement) {
     switch (statement->type) {

@@ -32,8 +32,13 @@ void BTreeIndex::create() {
     root = new BTreeLeaf(file, stat->get_root_id(), key_profile, true);
     closed = false;
     Handles *table_rows = relation.select();
-    for (auto const &row: *table_rows)
-        insert(row);
+    try {
+        for (auto const &row: *table_rows)
+            insert(row);
+    } catch (...) {
+        drop();
+        throw;
+    }
     delete table_rows;
 }
 
@@ -74,7 +79,6 @@ Handles *BTreeIndex::lookup(ValueDict *key_dict) const {
 }
 
 Handles *BTreeIndex::_lookup(BTreeNode *node, uint height, const KeyValue *key) const {
-    // FIXME
     Handles *handles = new Handles;
 
     if (height == 1) {
@@ -89,39 +93,7 @@ Handles *BTreeIndex::_lookup(BTreeNode *node, uint height, const KeyValue *key) 
     }
 
 }
-/*
-// recursive _lookup for lookup
-Handles *BTreeIndex::_lookup(BTreeNode *node, uint height, const KeyValue *key) const {
-        Handles* handles = new Handles();
-        auto *leaf = dynamic_cast<BTreeLeaf *>(node); // leaf def in BTreeNode.h 
-        Handle handle = leaf->find_eq(key);
-        if(handles->empty == false) {
-            handles->push_back(handle);
-            return handles;
-        } else {
-            return nullptr;
-        }
 
-        try {
-            Handles* handles = new Handles();
-            auto *leaf = dynamic_cast<BTreeLeaf *>(node); // leaf def in BTreeNode.h 
-            Handle handle = leaf->find_eq(key);
-            handles->push_back(handle);
-            return handles;
-        } catch(...) {
-            return nullptr;
-        }
-
-    } else {
-        auto *interior = dynamic_cast<BTreeInterior *>(node);
-        auto *found = interior->find(key, height);
-        Handles* handles = this->_lookup(found, height - 1, key);
-        delete found;
-        return handles;
-    }
-    return nullptr;
-}
-*/
 Handles *BTreeIndex::range(ValueDict *min_key, ValueDict *max_key) const {
     throw DbRelationError("Don't know how to do a range query on Btree index yet");
     // FIXME
@@ -206,7 +178,7 @@ bool test_btree() {
     row2["b"] = Value(101);
     table.insert(&row1);
     table.insert(&row2);
-    for (int i = 0; i < 1000; i++) {
+    for (int i = 0; i < 10 * 1000; i++) {
         ValueDict row;
         row["a"] = Value(i + 100);
         row["b"] = Value(-i);
