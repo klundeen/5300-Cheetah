@@ -73,11 +73,25 @@ Handles *BTreeIndex::lookup(ValueDict *key_dict) const {
     return this->_lookup(root, stat->get_height(), this->tkey(key_dict));
 }
 
-// recursive _lookup for lookup
 Handles *BTreeIndex::_lookup(BTreeNode *node, uint height, const KeyValue *key) const {
     // FIXME
-    
-    if (height == 1) { { // base case: a leaf node
+    Handles *handles = new Handles;
+
+    if (height == 1) {
+        auto *leaf = dynamic_cast<BTreeLeaf *>(node);
+        handles->push_back(leaf->BTreeLeaf::find_eq(key));
+        std::cout << "Leaf returned " << std::endl;
+        return handles;
+    } else {
+        auto *interior = dynamic_cast<BTreeInterior *>(node);
+        std::cout << "Interior returned " << std::endl;
+        return _lookup(interior->find(key, height), height -1, key);
+    }
+
+}
+/*
+// recursive _lookup for lookup
+Handles *BTreeIndex::_lookup(BTreeNode *node, uint height, const KeyValue *key) const {
         Handles* handles = new Handles();
         auto *leaf = dynamic_cast<BTreeLeaf *>(node); // leaf def in BTreeNode.h 
         Handle handle = leaf->find_eq(key);
@@ -109,6 +123,7 @@ Handles *BTreeIndex::_lookup(BTreeNode *node, uint height, const KeyValue *key) 
     }
     return nullptr;
 }
+*/
 
 Handles *BTreeIndex::range(ValueDict *min_key, ValueDict *max_key) const {
     throw DbRelationError("Don't know how to do a range query on Btree index yet");
