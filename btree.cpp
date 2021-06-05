@@ -102,7 +102,6 @@ Handles *BTreeIndex::_lookup(BTreeNode *node, uint height, const KeyValue *key) 
             return nullptr;
         }
 
-        /*
         try {
             Handles* handles = new Handles();
             auto *leaf = dynamic_cast<BTreeLeaf *>(node); // leaf def in BTreeNode.h 
@@ -160,6 +159,9 @@ Insertion BTreeIndex::_insert(BTreeNode *node, uint height, const KeyValue *key,
         auto *found = interior->find(key, height);
         Insertion insertion = _insert(found, height-1, key, handle);
         delete found;
+        if (!BTreeNode::insertion_is_none(insertion))
+            insertion = interior->insert(&insertion.second, insertion.first);
+        return insertion;
     }
 }
 
