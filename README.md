@@ -37,20 +37,23 @@ Note that we've added suppression for the known issues with the Berkeley DB libr
 Team: Priyanka Patil, Yinhui Li
 ### New Methods Added - all function without errors
 MS5 implemented methods: SELECT FROM TABLE, INSERT INTO TABLE, DELETE FROM TBALE  
-MS6 implemented methods:  
+MS6 implemented methods: lookup
 
 On cs1, 
 ```
 $ cd cpsc5300
 $ git clone https://github.com/klundeen/5300-Cheetah.git
+```
+Checkout the correct Milestone
+```
 $ git checkout tags/Milestone5
+```
+```
 $ git checkout tags/Milestone6
+```
+```
 $ make
 $ ./sql5300 ~/cpsc5300/data
 ```
-
-#### Our Handoff Video
-
-
 ---
 
