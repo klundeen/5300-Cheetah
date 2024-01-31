@@ -193,6 +193,26 @@ protected:
     std::string name;  // filename (or part of it)
 };
 
+/**
+ * @class ColumnAttribute - holds datatype and other info for a column
+ */
+class ColumnAttribute {
+public:
+    enum DataType {
+        INT, TEXT
+    };
+
+    ColumnAttribute(DataType data_type) : data_type(data_type) {}
+
+    virtual ~ColumnAttribute() {}
+
+    virtual DataType get_data_type() { return data_type; }
+
+    virtual void set_data_type(DataType data_type) { this->data_type = data_type; }
+
+protected:
+    DataType data_type;
+};
 
 // More type aliases
 typedef std::string Identifier;
