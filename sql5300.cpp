@@ -2,258 +2,244 @@
 *＠file sql5300.cpp - shell to execute SQL commsnds
 *＠author Dnyandeep--Cheetah 
 *@Seattle University, cpsc5300, winter 2024 
-*@Milestone1
-*@Jan 16, 2023
 */
 
-#include <iostream>
-#include <string>
-#include <cassert>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include "db_cxx.h"
+#include <cassert>
 #include "sqlhelper.h"
 #include "SQLParser.h"
-
+#include "heap_storage.h"
 using namespace std;
 using namespace hsql;
 
-// Function prototypes
 string unparseSelect(const SelectStatement* stmt);
 string unparseCreate(const CreateStatement* stmt);
 string unparseTable(const TableRef* table);
-string unparseOperator(const Expr* expr);
-string printExpression(const Expr* expr);
-string columnDefinitionToString(const ColumnDefinition* col);
-string runsql(const SQLStatement* stmt);
+string unparseOperator( const Expr *expr);
+string printExpression(const Expr *expr);
+
+
 
 /**
- * Unparse column type to string
- * @param col The column definition
- * @return The string representation of the column type
- */
-string columnDefinitionToString(const ColumnDefinition* col) {
-    string res(col->name);
-    switch (col->type) {
-        case ColumnDefinition::DOUBLE:
-            res += " DOUBLE";
-            break;
-        case ColumnDefinition::INT:
-            res += " INT";
-            break;
-        case ColumnDefinition::TEXT:
-            res += " TEXT";
-            break;
-        default:
-            res += " ...";
-            break;
-    }
-    return res;
+*  unparse column type
+**/
+string columnDefinitionToString(const ColumnDefinition *col){
+	string res(col->name);
+	switch(col->type){
+		case ColumnDefinition::DOUBLE:
+			res += " DOUBLE";
+			break;
+		case ColumnDefinition::INT:
+			res += " INT";
+			break;
+		case ColumnDefinition::TEXT:
+			res += " TEXT";
+			break;
+		default:
+		res += " ...";
+		break;
+	}
+	return res;
+}
+/**
+* unparse arithmetic and conditionals in SQL
+**/
+string unparseOperator(const Expr* expr){
+	if(expr == NULL){
+		return "null";
+	}
+	string res;
+	res += printExpression(expr->expr) + " ";
+	switch(expr->opType){
+		case Expr::SIMPLE_OP:
+			res += expr->opChar;
+			break;
+		case Expr::AND:
+			res += "AND";
+			break;
+		case Expr::OR:
+			res += "OR";
+			break;
+		case Expr::NOT:
+			res += "NOT";
+			break;
+		case Expr::IN:
+			res += "IN";
+			break;
+		case Expr::LIKE:
+			res += "LIKE";
+			break;			
+		default:
+			break;
+	}
+	if(expr->expr2 != NULL){
+		res += " " + printExpression(expr->expr2);
+	}
+	return res;
 }
 
 /**
- * Unparse arithmetic and conditionals in SQL
- * @param expr The expression to unparse
- * @return The unparsed string
- */
-string unparseOperator(const Expr* expr) {
-    if (expr == NULL) {
-        return "null";
-    }
-    string res;
-    res += printExpression(expr->expr) + " ";
-    switch (expr->opType) {
-        case Expr::SIMPLE_OP:
-            res += expr->opChar;
-            break;
-        case Expr::AND:
-            res += "AND";
-            break;
-        case Expr::OR:
-            res += "OR";
-            break;
-        case Expr::NOT:
-            res += "NOT";
-            break;
-        case Expr::IN:
-            res += "IN";
-            break;
-        case Expr::LIKE:
-            res += "LIKE";
-            break;
-        default:
-            break;
-    }
-    if (expr->expr2 != NULL) {
-        res += " " + printExpression(expr->expr2);
-    }
-    return res;
-}
+*  convert Abstract Syntax to string
+**/
+string printExpression(const Expr *expr){
+	string res;
+
+	switch(expr->type){
+		case kExprStar:
+			res += "*";
+			break;
+		case kExprColumnRef:
+			if(expr->table != NULL){
+				res += string(expr->table) + ".";
+			}
+		case kExprLiteralString:
+			res += expr -> name;
+			break;
+		case kExprLiteralFloat:
+			res += to_string(expr->fval);
+			break;
+		case kExprLiteralInt:
+			res += to_string(expr->ival);
+			break;
+		
+		case kExprOperator:
+			res += unparseOperator(expr);
+			break;
+		case kExprFunctionRef:
+			res += string(expr->name) + "?" + expr->expr->name;
+			break;	
+		default:
+			res += "Invalid expression ";
+			break;
+	}
+	if(expr->alias != NULL){
+		res += string(" AS ") + expr->alias;
+	} 
+	return res;
+} 
 
 /**
- * Convert Abstract Syntax to string
- * @param expr The expression to convert
- * @return The string representation of the expression
- */
-string printExpression(const Expr* expr) {
-    string res;
-
-    switch (expr->type) {
-        case kExprStar:
-            res += "*";
-            break;
-        case kExprColumnRef:
-            if (expr->table != NULL) {
-                res += string(expr->table) + ".";
-            }
-        case kExprLiteralString:
-            res += expr->name;
-            break;
-        case kExprLiteralFloat:
-            res += to_string(expr->fval);
-            break;
-        case kExprLiteralInt:
-            res += to_string(expr->ival);
-            break;
-
-        case kExprOperator:
-            res += unparseOperator(expr);
-            break;
-        case kExprFunctionRef:
-            res += string(expr->name) + "?" + expr->expr->name;
-            break;
-        default:
-            res += "Invalid expression ";
-            break;
-    }
-    if (expr->alias != NULL) {
-        res += string(" AS ") + expr->alias;
-    }
-    return res;
+* unparse join operators, table names and alias
+**/
+string unparseTable(const TableRef* table){
+	string res;
+	switch (table->type){
+	case kTableSelect: 
+		unparseSelect(table->select);
+		break; 
+	case kTableName: 
+		res +=(table->name);
+		if( table->alias != NULL){
+			res += string(" AS ") + table->alias;
+		}
+		break; 
+	case kTableJoin: 
+		res += unparseTable(table->join->left);
+		switch(table->join->type){
+			
+			case kJoinInner:
+				res += " JOIN "; 
+				break; 
+			case kJoinOuter:
+				res += " OUTER JOIN ";
+				break;
+			case kJoinLeft:
+				res += " LEFT JOIN ";
+				break;
+			case kJoinRight:
+				res += " RIGHT JOIN "; 
+				break;	
+			default:
+				cout << "Invalid Join" << endl;
+				break;
+			} 
+			res += unparseTable(table->join->right);
+			if (table->join->condition != NULL){
+				res += " ON " + unparseOperator(table->join->condition);
+			}
+		break;	
+	case kTableCrossProduct:
+		{
+		bool columns = false;
+		for(TableRef* tbl : *table->list) {
+			if(columns){
+				res += ", ";
+			}
+			res += unparseTable(tbl); 
+			columns = true;
+		}
+		break;
+		}
+	default:
+		cout << "Invalid Table Unparsing" << endl;
+		break;
+	}
+	return res;
 }
 
-/**
- * Unparse join operators, table names, and alias
- * @param table The table reference
- * @return The unparsed string
- */
-string unparseTable(const TableRef* table) {
-    string res;
-    switch (table->type) {
-        case kTableSelect:
-            unparseSelect(table->select);
-            break;
-        case kTableName:
-            res += (table->name);
-            if (table->alias != NULL) {
-                res += string(" AS ") + table->alias;
-            }
-            break;
-        case kTableJoin:
-            res += unparseTable(table->join->left);
-            switch (table->join->type) {
-                case kJoinInner:
-                    res += " JOIN ";
-                    break;
-                case kJoinOuter:
-                    res += " OUTER JOIN ";
-                    break;
-                case kJoinLeft:
-                    res += " LEFT JOIN ";
-                    break;
-                case kJoinRight:
-                    res += " RIGHT JOIN ";
-                    break;
-                default:
-                    cout << "Invalid Join" << endl;
-                    break;
-            }
-            res += unparseTable(table->join->right);
-            if (table->join->condition != NULL) {
-                res += " ON " + unparseOperator(table->join->condition);
-            }
-            break;
-        case kTableCrossProduct: {
-            bool columns = false;
-            for (TableRef* tbl : *table->list) {
-                if (columns) {
-                    res += ", ";
-                }
-                res += unparseTable(tbl);
-                columns = true;
-            }
-            break;
-        }
-        default:
-            cout << "Invalid Table Unparsing" << endl;
-            break;
-    }
-    return res;
-}
 
 /**
- * Unparse SELECT SQL Statement
- * @param stmt The SELECT statement
- * @return The unparsed SQL string
- */
+*unparse Select SQL Statement
+**/
 string unparseSelect(const SelectStatement* stmt) {
-    string res = "SELECT ";
-    bool columns = false;
-    for (Expr* expr : *stmt->selectList) {
+	string res = "SELECT ";
+	bool columns = false;
+	for (Expr* expr : *stmt->selectList) {
 
-        if (columns) {
-            res += ", ";
-        }
-        res += printExpression(expr);
-        columns = true;
-    }
+		if(columns){
+			res += ", ";
+		}
+		res += printExpression(expr);
+		columns = true;
+	}
 
-    res += " FROM " + unparseTable(stmt->fromTable);
+	res += " FROM " + unparseTable(stmt->fromTable);
 
-    if (stmt->whereClause != NULL) {
-        res += " WHERE " + printExpression(stmt->whereClause);
-    }
-    return res;
+	if (stmt->whereClause != NULL){
+		res += " WHERE " + printExpression(stmt->whereClause);
+	}
+	return res;
 }
 
 /**
- * Unparse CREATE SQL statement
- * @param stmt The CREATE statement
- * @return The unparsed SQL string
- */
-string unparseCreate(const CreateStatement* stmt) {
-    string res;
-    res += "CREATE TABLE ";
-    if (stmt->type != CreateStatement::kTable) {
-        return res + "Table is invalid";
-    }
-    if (stmt->ifNotExists) {
-        res += "IF NOT EXIST ";
-    }
-    res += string(stmt->tableName) + " (";
-    bool columns = false;
-    for (ColumnDefinition* col : *stmt->columns) {
-        if (columns) {
-            res += ", ";
-        }
-        res += columnDefinitionToString(col);
-        columns = true;
-    }
-    res += ")";
-    return res;
+*unparse CREATE SQL statement
+**/
+string unparseCreate(const CreateStatement* stmt){
+	string res;
+	res += "CREATE TABLE ";
+	if(stmt->type != CreateStatement::kTable){
+		return res + "Table is invalid";
+	}
+	if(stmt->ifNotExists){
+		res += "IF NOT EXIST ";
+	}
+	res += string(stmt->tableName) + " (";
+	bool columns = false;
+	for (ColumnDefinition *col : *stmt->columns){
+		if(columns){
+			res += ", ";
+		}
+		res += columnDefinitionToString(col);
+		columns = true;
+	}
+	res += ")";
+	return res;
 }
 
 /**
- * Handle two different types of query: SELECT and CREATE.
- * @param stmt The SQL statement
- * @return The result of the SQL operation
- */
+* handle two different types of quary: Select and Create.
+**/
 string runsql(const SQLStatement* stmt) {
 
-    if (stmt->type() == kStmtSelect)
-        return unparseSelect((const SelectStatement*)stmt);
-    else if (stmt->type() == kStmtCreate)
-        return unparseCreate((const CreateStatement*)stmt);
-    else
-        return " Invalid sql statement";
+	if(stmt->type()==kStmtSelect)
+		return unparseSelect((const SelectStatement*)stmt);
+	else if(stmt->type()==kStmtCreate)	
+	    return unparseCreate((const CreateStatement*)stmt);
+	else
+		return " Invalid sql statement" ;
 }
 
 int main(int argc, char **argv)
@@ -267,7 +253,7 @@ int main(int argc, char **argv)
 	//arg[1] as directory path
 	char *envDir = argv[1];
 	DbEnv *myEnv = new DbEnv(0U);
-
+	
 	//create database env if it doesn't exist
 	try {
 		myEnv->open(envDir, DB_CREATE | DB_INIT_MPOOL, 0);
@@ -284,7 +270,7 @@ int main(int argc, char **argv)
 		std::cerr << e.what() << std::endl;
 		exit(-1);
 	}
-
+	
 	//SQL starts
 	while (true) {
 		string sqlcmd;
@@ -294,6 +280,10 @@ int main(int argc, char **argv)
 		if (sqlcmd == "quit") {
 			break;
 		}
+		if (sqlcmd == "test") {
+            cout << "test_heap_storage: " << (test_heap_storage() ? "ok" : "failed") << endl;
+            continue;
+        }
 		if (sqlcmd.length() < 1) {
 			continue;
 		}
