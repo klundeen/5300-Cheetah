@@ -214,6 +214,22 @@ protected:
     DataType data_type;
 };
 
+/**
+ * @class Value - holds value for a field
+ */
+class Value {
+public:
+    ColumnAttribute::DataType data_type;
+    int32_t n;
+    std::string s;
+
+    Value() : n(0) { data_type = ColumnAttribute::INT; }
+
+    Value(int32_t n) : n(n) { data_type = ColumnAttribute::INT; }
+
+    Value(std::string s) : n(0), s(s) { data_type = ColumnAttribute::TEXT; }
+};
+
 // More type aliases
 typedef std::string Identifier;
 typedef std::vector<Identifier> ColumnNames;
