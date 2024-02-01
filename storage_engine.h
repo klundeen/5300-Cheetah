@@ -3,9 +3,9 @@
  * DbBlock
  * DbFile
  * DbRelation
- * Dnyandeep Dhok----Cheetah
+ *
  * @author Kevin Lundeen
- * @see "Seattle University, CPSC5300, Winter 2024"
+ * @see "Seattle University, CPSC5300, Winter 2023"
  */
 #pragma once
 
@@ -193,6 +193,7 @@ protected:
     std::string name;  // filename (or part of it)
 };
 
+
 /**
  * @class ColumnAttribute - holds datatype and other info for a column
  */
@@ -213,6 +214,7 @@ public:
 protected:
     DataType data_type;
 };
+
 
 /**
  * @class Value - holds value for a field

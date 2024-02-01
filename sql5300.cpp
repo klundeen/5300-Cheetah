@@ -1,7 +1,9 @@
 /**
 *＠file sql5300.cpp - shell to execute SQL commsnds
-*＠author Dnyandeep--Cheetah 
-*@Seattle University, cpsc5300, winter 2024 
+*＠author Jeb-Chieh,Mohith 
+*@see "Seattle University, cpsc5300, winter 2023"
+*@Milestone1
+*@Jan 16, 2023
 */
 
 #include <stdio.h>
@@ -14,6 +16,8 @@
 #include "heap_storage.h"
 using namespace std;
 using namespace hsql;
+
+DbEnv *_DB_ENV;
 
 string unparseSelect(const SelectStatement* stmt);
 string unparseCreate(const CreateStatement* stmt);
