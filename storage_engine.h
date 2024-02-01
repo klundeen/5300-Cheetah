@@ -5,7 +5,7 @@
  * DbRelation
  *
  * @author Kevin Lundeen
- * @see "Seattle University, CPSC5300, Winter 2023"
+ * @see "Seattle University, CPSC5300, Winter 2024"
  */
 #pragma once
 

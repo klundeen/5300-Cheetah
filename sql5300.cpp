@@ -1,7 +1,7 @@
 /**
 *＠file sql5300.cpp - shell to execute SQL commsnds
-*＠author Jeb-Chieh,Mohith 
-*@see "Seattle University, cpsc5300, winter 2023"
+*＠author Dnyandeep Dhok ---Cheetah
+*@see "Seattle University, cpsc5300, winter 2024"
 *@Milestone1
 *@Jan 16, 2023
 */
