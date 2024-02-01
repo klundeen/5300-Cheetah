@@ -1,9 +1,20 @@
+/*
+
+SQL shell that allows users to execute SQL commands interactively. 
+It initializes a Berkeley DB environment using a specified path and 
+then enters a loop to continuously prompt the user for SQL queries. 
+The program parses the user input using the `hsql` parser, 
+executing valid SQL statements and printing the results. 
+Error handling is implemented to detect invalid SQL statements and 
+report errors during database environment initialization. 
+Additionally, the shell supports commands to quit and run heap storage tests. 
+Overall, it provides a basic yet functional interface for executing SQL commands.
+*/
+
 /**
 *＠file sql5300.cpp - shell to execute SQL commsnds
 *＠author Dnyandeep Dhok ---Cheetah
 *@see "Seattle University, cpsc5300, winter 2024"
-*@Milestone1
-*@Jan 16, 2023
 */
 
 #include <stdio.h>
